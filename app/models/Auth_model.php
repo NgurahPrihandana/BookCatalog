@@ -65,6 +65,7 @@ class Auth_model {
                                 if(!($this->db->execute())) {
                                     echo 'Data is not inserted';
                                 }
+                                Flasher::setFlash('User Created','blabla','success');
                                 return $this->db->rowCount();
                             }
                         }
@@ -144,18 +145,18 @@ class Auth_model {
                     }
                 }
                 // if users doesn't have cookie yet
-                $current_user_query = "SELECT id_author,username,password,email FROM $this->tb_author WHERE username=:verificator OR email=:verificator UNION SELECT id_admin,username,password,fullname FROM $this->tb_admin WHERE username=:verificator";
+                $current_user_query = "SELECT id_author as id_user,username,password,email FROM $this->tb_author WHERE username=:verificator OR email=:verificator UNION SELECT id_admin,username,password,fullname FROM $this->tb_admin WHERE username=:verificator";
                 $this->db->query($current_user_query);
                 $this->db->bind('verificator',$verificator);
                 $this->db->execute();
                 if($this->db->rowCount() > 0) {
                     $current_user = $this->db->single();
-                    // if the user has an email, it MUST be an author
-                    if(isset($current_user['email'])) {
+                    // if the user has an email and it is a correct email, it MUST be an author
+                    if(isset($current_user['email']) && filter_var($current_user['email'], FILTER_VALIDATE_EMAIL)) {
                         $password_user = $current_user['password'];
                         if (password_verify($password,$password_user)) {
                             session_start();
-                            $_SESSION['id_user'] = $current_user['id_author'];
+                            $_SESSION['id_user'] = $current_user['id_user'];
                             $_SESSION['status'] = 'login';
                             $_SESSION['role'] = AUTHOR;
                             if(isset($data['remember'])) {
@@ -164,26 +165,29 @@ class Auth_model {
                                 setcookie('verificator',hash('sha256',$current_user['verificator']), time()+60 * 5);
                                 setcookie('role',AUTHOR,time()+60 * 5);
                             }
-                            header('Location: '.BASEURL.'/index');
+                            header('Location: '.BASEURL.'/Author/index');
                         }
                     } else {
                         $password_user = $current_user['password'];
                         if (password_verify($password,$password_user)) {
                             session_start();
-                            $_SESSION['id_user'] = $current_user['id_admin'];
+                            $_SESSION['id_user'] = $current_user['id_user'];
                             $_SESSION['status'] = 'login';
                             $_SESSION['role'] = ADMIN;
+                            Flasher::setFlash("User Created","blabla","success");
                             if(isset($data['remember'])) {
                                 // buat cookie
                                 setcookie('id', $current_user['id_admin'], time()+60 * 5);
                                 setcookie('verificator',hash('sha256',$current_user['verificator']), time()+60 * 5);
                                 setcookie('role',ADMIN,time()+60 * 5);
                             }
-                            header('Location: '.BASEURL.'/index');
+                            header('Location: '.BASEURL.'/Admin/index');
+                        } else {
+                            var_dump('wrong password');
                         }
                     }
                 } else {
-                    var_dump('user tidak tersedia');
+                    var_dump('there is no user with username or email = ' . $verificator);
                 }
             } else {
                 var_dump('password is not being set');
