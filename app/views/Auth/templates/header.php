@@ -6,6 +6,8 @@
     <!-- style.css -->
     <link rel="stylesheet" href="<?=BASEURL; ?>/assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="<?= BASEURL; ?>/assets/css/sweetalert2.min.css">
+    <link rel="stylesheet" type="text/css" href="<?= BASEURL; ?>/assets/css/toastr.min.css">
+    <link rel="stylesheet" type="text/css" href="<?= BASEURL; ?>/assets/css/toastr.css">
     <style>
         /* .form-control:focus{
             border-color: #cccccc;
@@ -13,16 +15,13 @@
             box-shadow: none;
         } */
 
-        textarea:hover, 
-        input:hover, 
-        textarea:active, 
-        input:active, 
-        textarea:focus, 
-        input:focus,
-        button:focus,
-        button:active,
-        button:hover,
-        label:focus,
+        input.form-control:hover, 
+        input.form-control:active, 
+        input.form-control:focus,
+        button.form-control:focus,
+        button.form-control:active,
+        button.form-control:hover,
+        label.form-control:focus,
         .btn:active,
         .btn.active
         {

@@ -32,7 +32,8 @@ class Auth_model {
     public function register($data) {
         $fullname = htmlspecialchars($data['fullname']);
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            var_dump('Invalid Email');die;
+            Flasher::setToast('Error','Invalid Email','error');
+            header('Location: ' . BASEURL . '/auth/register');
         } else {
             $email = $data['email'];
         }
@@ -45,14 +46,18 @@ class Auth_model {
                 if(isset($email) && $email !== '') {
                     if(isset($password) && $password !== '') {
                         if($this->getUserBy('username',$username,AUTHOR)) {
-                            var_dump('username is already being used');
+                            Flasher::setToast('Error','Username is already being used','error');
+                            header('Location: ' . BASEURL . '/auth/register');
                         } elseif($this->getUserBy('username',$username,ADMIN)) {
-                            var_dump('username is already being used');
+                            Flasher::setToast('Error','Username is already being used','error');
+                            header('Location: ' . BASEURL . '/auth/register');
                         }elseif($this->getUserBy('email',$email,AUTHOR)) {
-                            var_dump('email is already being used');
+                            Flasher::setToast('Error','Email is already being used','error');
+                            header('Location: ' . BASEURL . '/auth/register');
                         }else {
                             if($password !== $conf_password) {
-                                var_dump('Password and confirm password did not match');
+                                Flasher::setToast('Error','Password and confirm password did not match','error');
+                                header('Location: ' . BASEURL . '/auth/register');
                             } else {
                                 $register_query = "INSERT INTO `$this->tb_author`(fullname,username,email,password) VALUES(:fullname,:username,:email,:password)";
                                 $this->db->query($register_query);
@@ -63,27 +68,87 @@ class Auth_model {
                                 $this->db->bind('password',password_hash($password,PASSWORD_DEFAULT));
                                 // execute query
                                 if(!($this->db->execute())) {
-                                    echo 'Data is not inserted';
+                                    Flasher::setToast('Error','User is not created','error');
+                                    header('Location: ' . BASEURL . '/auth/register');
                                 }
-                                Flasher::setFlash('User Created','blabla','success');
+                                Flasher::setToast('User Created','Hello ' . $username,'success');
                                 return $this->db->rowCount();
                             }
                         }
                     } else {
-                        var_dump('Password is not being set');
+                        Flasher::setToast('Warning','Password is not being set','warning');
+                        header('Location: ' . BASEURL . '/auth/register');
                     }
                 } else {
-                    var_dump('Email is not being set');
+                    Flasher::setToast('Warning','Email is not being set','warning');
+                    header('Location: ' . BASEURL . '/auth/register');
                 }
             } else {
-                var_dump('Username is not being set');
+                Flasher::setToast('Warning','Username is not being set','warning');
+                header('Location: ' . BASEURL . '/auth/register');
             }
         } else {
-            var_dump('Fullname is not being set');
+            Flasher::setToast('Warning','Fullname is not being set','warning');
+            header('Location: ' . BASEURL . '/auth/register');
+        }
+    }
+
+    public function loginByCookie($data) {
+        if(isset($data['id']) && isset($data['verificator']) && isset($data['role'])) {
+            $cookie_id = $data['id'];
+            $cookie_verificator = $data['verificator'];
+            $cookie_role = $data['role'];
+
+            // var_dump($cookie_id);die;
+            // var_dump($cookie_verificator);die;
+            // var_dump($cookie_role);die;
+
+            if($cookie_role == AUTHOR) {
+                $remember_query = "SELECT * FROM $this->tb_author WHERE id_author=:id";
+                $this->db->query($remember_query);
+                $this->db->bind('id',$cookie_id);
+                $this->db->execute();
+                if($this->db->rowCount() > 0) {
+                    $remember_user = $this->db->single();
+                    if(hash('sha256',$remember_user['username']) === $cookie_verificator) {
+                        $_SESSION['id_user'] = $remember_user['id_author'];
+                        $_SESSION['status'] = 'login';
+                        $_SESSION['role'] = AUTHOR;
+                        Flasher::setFlash("Login Successful","Welcome " . $remember_user['username'],"success");
+                        header('Location: '.BASEURL.'/Author/index');
+                    }
+                } else {
+                    var_dump('cookie data is incorrect');die;
+                }
+            } else {
+                $remember_query = "SELECT * FROM $this->tb_admin WHERE id_admin=:id";
+                // var_dump($remember_query);die;
+                $this->db->query($remember_query);
+                $this->db->bind('id',$cookie_id);
+                $this->db->execute();
+                if($this->db->rowCount() > 0) {
+                    $remember_user = $this->db->single();
+                    // var_dump($remember_user);die;
+                    if(hash('sha256',$remember_user['username']) === $cookie_verificator) {
+                        // var_dump('benar');die;
+                        $_SESSION['id_user'] = $remember_user['id_author'];
+                        $_SESSION['status'] = 'login';
+                        $_SESSION['role'] = ADMIN;
+                        Flasher::setFlash("Login Successful","Welcome " . $remember_user['username'],"success");
+                        header('Location: '.BASEURL.'/Admin/index');
+                    } else {
+                        var_dump('wrong');die;
+                    }
+                } else {
+                    var_dump('cookie data is incorrect');die;
+                }
+            }
         }
     }
 
     public function login($data) {
+        
+
         $verificator = htmlspecialchars($data['verificator']);
         $password = htmlspecialchars($data['password']);
 
@@ -107,43 +172,7 @@ class Auth_model {
                 //         header('Location: '.BASEURL.'/admin');
                 //     }
                 // }
-                if(isset($_COOKIE['id']) && isset($_COOKIE['verificator']) && isset($_COOKIE['role'])) {
-                    $cookie_id = $_COOKIE['id'];
-                    $cookie_verificator = $_COOKIE['verificator'];
-                    $cookie_role = $_COOKIE['role'];
-
-                    if($cookie_role == AUTHOR) {
-                        $remember_query = "SELECT * FROM '$this->tb_author' WHERE id_author=:id";
-                        $this->db->query($remember_query);
-                        $this->db->bind('id',$cookie_id);
-                        $this->db->execute();
-                        if($this->db->rowCount() > 0) {
-                            $remember_user = $this->db->single();
-                            if(hash('sha256',$cookie_verificator) == $remember_user['username']) {
-                                $_SESSION['id_user'] = $remember_user['id_author'];
-                                $_SESSION['status'] = 'login';
-                                $_SESSION['role'] = AUTHOR;
-                                header('Location: '.BASEURL.'/index');
-                            }
-                        } else {
-                            var_dump('cookie data is incorrect');
-                        }
-                    } else {
-                        $remember_query = "SELECT * FROM '$this->tb_admin' WHERE id_admin=:id";
-                        $this->db->query($remember_query);
-                        $this->db->bind('id',$cookie_id);
-                        $this->db->execute();
-                        if($this->db->rowCount() > 0) {
-                            $remember_user = $this->db->single();
-                            if(hash('sha256',$cookie_verificator) == $remember_user['username']) {
-                                $_SESSION['id_user'] = $remember_user['id_author'];
-                                $_SESSION['status'] = 'login';
-                                $_SESSION['role'] = ADMIN;
-                                header('Location: '.BASEURL.'/index');
-                            }
-                        }
-                    }
-                }
+                
                 // if users doesn't have cookie yet
                 $current_user_query = "SELECT id_author as id_user,username,password,email FROM $this->tb_author WHERE username=:verificator OR email=:verificator UNION SELECT id_admin,username,password,fullname FROM $this->tb_admin WHERE username=:verificator";
                 $this->db->query($current_user_query);
@@ -155,31 +184,31 @@ class Auth_model {
                     if(isset($current_user['email']) && filter_var($current_user['email'], FILTER_VALIDATE_EMAIL)) {
                         $password_user = $current_user['password'];
                         if (password_verify($password,$password_user)) {
-                            session_start();
                             $_SESSION['id_user'] = $current_user['id_user'];
                             $_SESSION['status'] = 'login';
                             $_SESSION['role'] = AUTHOR;
+                            Flasher::setFlash("Login Successful","Welcome " . $current_user['username'],"success");
                             if(isset($data['remember'])) {
                                 // buat cookie
-                                setcookie('id', $current_user['id_author'], time()+60 * 5);
-                                setcookie('verificator',hash('sha256',$current_user['verificator']), time()+60 * 5);
-                                setcookie('role',AUTHOR,time()+60 * 5);
+                                setcookie('id', $current_user['id_user'], time()+60 * 5,'/');
+                                setcookie('verificator',hash('sha256',$verificator), time()+60 * 5,'/');
+                                setcookie('role',AUTHOR,time()+60 * 5,'/');
                             }
                             header('Location: '.BASEURL.'/Author/index');
                         }
                     } else {
                         $password_user = $current_user['password'];
                         if (password_verify($password,$password_user)) {
-                            session_start();
                             $_SESSION['id_user'] = $current_user['id_user'];
                             $_SESSION['status'] = 'login';
                             $_SESSION['role'] = ADMIN;
-                            Flasher::setFlash("User Created","blabla","success");
+                            Flasher::setFlash("Login Successful","Welcome " . $current_user['username'],"success");
                             if(isset($data['remember'])) {
+                                var_dump('HEllo');
                                 // buat cookie
-                                setcookie('id', $current_user['id_admin'], time()+60 * 5);
-                                setcookie('verificator',hash('sha256',$current_user['verificator']), time()+60 * 5);
-                                setcookie('role',ADMIN,time()+60 * 5);
+                                setcookie('id', $current_user['id_user'], time()+60 * 5,'/');
+                                setcookie('verificator',hash('sha256',$verificator), time()+60 * 5,'/');
+                                setcookie('role',ADMIN,time()+60 * 5,'/');
                             }
                             header('Location: '.BASEURL.'/Admin/index');
                         } else {
@@ -187,13 +216,16 @@ class Auth_model {
                         }
                     }
                 } else {
-                    var_dump('there is no user with username or email = ' . $verificator);
+                    Flasher::setToast('Error','There is no user with username or email = ' . $verificator,'error');
+                    header('Location: ' . BASEURL . '/auth/index');
                 }
             } else {
-                var_dump('password is not being set');
+                Flasher::setToast('Warning','Password is not being set','warning');
+                header('Location: ' . BASEURL . '/auth/index');
             }
         } else {
-            var_dump('username is not being set');
+            Flasher::setToast('Warning','Verificator is not being set','warning');
+            header('Location: ' . BASEURL . '/auth/index');
         }
     }
 }

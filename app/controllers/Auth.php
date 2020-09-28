@@ -4,14 +4,20 @@ class Auth extends Controller {
 
     public function index()
     {
-        if ( !isset($_POST['login']) ) {
+        if ( isset($_COOKIE['id']) && isset($_COOKIE['verificator']) && isset($_COOKIE['role']) ) {
+            if($this->model('Auth_model')->loginByCookie($_COOKIE) > 0)    {
+
+            }
+        } else if(!isset($_POST['login']) || !isset($_COOKIE['id']) && isset($_COOKIE['verificator']) && isset($_COOKIE['role'])) {
             $this->view('Auth/templates/header');
             $this->view('Auth/index');
             $this->view('Auth/templates/footer');
-        } else {
+        } else if(isset($_POST['login']) || !isset($_COOKIE['id']) && isset($_COOKIE['verificator']) && isset($_COOKIE['role'])){
             if($this->model('Auth_model')->login($_POST) > 0)    {
-                var_dump('login success');die;
+                
             }
+        } else {
+            var_dump($_COOKIE);die;
         }
     }
 
@@ -26,5 +32,15 @@ class Auth extends Controller {
                 header('Location: ' . BASEURL . '/auth/index');
             }
         }
+    }
+
+    public function logout() {
+        session_start();
+        $_SESSION = [];
+        session_unset();
+        session_destroy();
+
+        setcookie('id','',time()-3600);
+        setcookie('key','',time()-3600);
     }
 }
